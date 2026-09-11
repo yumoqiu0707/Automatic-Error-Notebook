@@ -1504,7 +1504,7 @@ function openSettings() {
       if (c.api_key_set) mask.querySelector('#m-key').placeholder = '已保存（留空表示不修改）';
     }).catch(function () {});
   } else {
-    mask.querySelector('#m-tip').textContent = '当前未连接本地服务，设置无法保存。请先运行 node server.js。';
+    mask.querySelector('#m-tip').textContent = '当前未连接本地服务，设置无法保存。请先启动程序：双击「错题集助手.exe」（打包版）或「启动错题集助手.bat」（源码版）。';
   }
 
   mask.querySelector('#m-clear').addEventListener('click', async function () {
@@ -1669,7 +1669,7 @@ async function loadBook() {
     $('#stat-cards').innerHTML = '';
     $('#subject-nav').innerHTML = '';
     $('#book-list').innerHTML = '<div class="card"><div class="empty">' +
-      '未连接本地服务。错题集保存在服务端的 data/db.json，请先运行 <code>node server.js</code>。</div></div>';
+      '未连接本地服务。错题集保存在服务端的 data/db.json。请先启动程序：<b>双击「错题集助手.exe」</b>（打包版）或 <b>双击「启动错题集助手.bat」</b>（源码版）。</div></div>';
     return;
   }
   try {
@@ -1683,7 +1683,13 @@ async function loadBook() {
     book.subjects = sub.subjects || [];
     renderBook();
   } catch (e) {
-    $('#book-list').innerHTML = '<div class="card"><div class="callout bad"><span class="ic">!</span><div>读取错题集失败：' + esc(e.message) + '</div></div></div>';
+    /* 连不上本地服务时给一句用户看得懂、能照着做的提示，而不是浏览器原始的 Failed to fetch */
+    var netFail = !e || e.name === 'TypeError' || /Failed to fetch|NetworkError|Load failed/i.test(String(e.message || ''));
+    $('#book-list').innerHTML = '<div class="card"><div class="callout bad"><span class="ic">!</span><div>' +
+      (netFail
+        ? '读取错题集失败：连不上本地服务。请先启动程序 —— <b>双击「错题集助手.exe」</b>（打包版）或 <b>双击「启动错题集助手.bat」</b>（源码版），浏览器会自动打开本页。'
+        : '读取错题集失败：' + esc(e.message)) +
+      '</div></div></div>';
   }
 }
 
@@ -2053,7 +2059,7 @@ $('#f-clear').addEventListener('click', function () {
 });
 $$('[data-export]').forEach(function (b) {
   b.addEventListener('click', function () {
-    if (!API_OK) { alert('导出需要本地服务，请先运行 node server.js。'); return; }
+    if (!API_OK) { alert('导出需要本地服务在运行。请先双击「错题集助手.exe」（打包版）或「启动错题集助手.bat」（源码版）启动程序。'); return; }
     var q = filterQuery();
     window.location.href = '/api/export?format=' + b.dataset.export + '&' + new URLSearchParams(q);
   });
@@ -2079,7 +2085,7 @@ $('#btn-reset').addEventListener('click', function () {
 });
 
 /* 离线时的 System 提示词兜底（与服务端 system-prompt.js 保持一致的精简版说明） */
-var SYS_PROMPT_FALLBACK = '（未连接本地服务，无法读取完整 System 提示词。请运行 node server.js 后重试；' +
+var SYS_PROMPT_FALLBACK = '（未连接本地服务，无法读取完整 System 提示词。请先启动程序（双击「错题集助手.exe」或「启动错题集助手.bat」）后重试；' +
   '或直接把题目发给我，我来按交付版规范输出 JSON。）';
 
 setStep(1);
