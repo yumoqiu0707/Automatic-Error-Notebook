@@ -20,7 +20,7 @@ const DIST_DIR = path.join(ROOT, 'dist');
 const APP_DIR = path.join(DIST_DIR, '错题集助手');
 const APP_NAME = '错题集助手.exe';
 
-const ENTRIES = ['server.js', 'db.js', 'system-prompt.js', 'paths.js', 'qr.js'];
+const ENTRIES = ['server.js', 'db.js', 'sample-mistakes.js', 'system-prompt.js', 'paths.js', 'qr.js'];
 const COPY_DIRS = ['public'];
 const COPY_FILES = ['config.example.json'];
 /* 不打包进分发目录的文件（早期的纯前端模拟页，与打包版无关） */

@@ -36,7 +36,7 @@ rmDir(OUT);
 fs.mkdirSync(OUT, { recursive: true });
 
 /* 1. 后端源码 */
-['server.js', 'db.js', 'system-prompt.js', 'paths.js', 'qr.js'].forEach(f => {
+['server.js', 'db.js', 'sample-mistakes.js', 'system-prompt.js', 'paths.js', 'qr.js'].forEach(f => {
   fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
   console.log('  + ' + f);
 });
@@ -53,13 +53,13 @@ for (const e of fs.readdirSync(path.join(ROOT, 'public'), { withFileTypes: true 
 }
 console.log('  + public/  (' + n + ' 项)');
 
-/* 3. 配置：带上模型密钥，开口令，关掉视觉（DeepSeek 不支持） */
+/* 3. 配置：带上模型密钥，开口令；视觉开关跟随源 config.json */
 const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
 const deployCfg = {
   base_url: cfg.base_url,
   api_key: cfg.api_key,
   model: cfg.model,
-  vision: false,                 // deepseek-chat 是纯文字模型，别给朋友一个点了就报错的拍照按钮
+  vision: cfg.vision !== false,  // 跟随源配置：模型支持视觉（如 deepseek-flash / gpt-4o）时可开；纯文字模型请在 config.json 里置 vision=false
   temperature: 0.2,
   top_p: 0.8,
   use_json_mode: true,
@@ -67,7 +67,7 @@ const deployCfg = {
   access_code: CODE              // 公网必须开口令，否则谁都能刷你的额度
 };
 fs.writeFileSync(path.join(OUT, 'config.json'), JSON.stringify(deployCfg, null, 2), 'utf8');
-console.log('  + config.json  (model=' + deployCfg.model + ', vision=false, access_code=' + CODE + ')');
+console.log('  + config.json  (model=' + deployCfg.model + ', vision=' + deployCfg.vision + ', access_code=' + CODE + ')');
 
 /* 4. package.json */
 fs.writeFileSync(path.join(OUT, 'package.json'), JSON.stringify({

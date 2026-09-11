@@ -87,7 +87,8 @@ function req(pathname, headers) {
     bad('服务能在隔离目录启动', banner.slice(-400));
     child.kill(); rmDir(TMP);
     console.log('\n  通过 ' + pass + ' 项，失败 ' + fail + ' 项\n');
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
   ok('服务能在隔离目录启动');
 
@@ -176,5 +177,5 @@ function req(pathname, headers) {
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
   if (banner2 && fail) console.log('\n--- 第二个实例输出 ---\n' + banner2.slice(-600));
   console.log('');
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 })();

@@ -15,7 +15,7 @@
 | **A. 免安装 exe（下载即用）** | 想装在自己电脑上 / 发给别人 | ❌ 不需要 |
 | **B. 手机扫码使用** | 拍错题、随身复习 | ❌ 不需要（电脑跑 A 即可） |
 | **C. 双击启动脚本** | 在源码目录里快速用 | ✅ 需要 |
-| **D. 安装成桌面应用（PWA）** | 想要独立窗口、没有黑窗口 | ✅ 需要 |
+| **D. 安装成桌面应用（PWA）** | 想要独立窗口、没有黑窗口 | ⚠️ 先有服务（用 A 则免 Node） |
 
 ### A. 免安装桌面应用（单文件 exe）
 
@@ -133,11 +133,18 @@ https://xxxx-你的公网IP.free.pinggy.net/?code=123456
 
 ### D. 安装成桌面应用（PWA）
 
-用 Chrome / Edge 打开 <http://127.0.0.1:5178>，地址栏右侧会出现**安装图标**（或点页面右上角自动出现的「安装到桌面」按钮）。装完之后：
+> ⚠️ **前提：后台服务必须先在运行。** D 不是独立的第四种程序，而是把 A / C 起的服务套一层独立窗口——服务没跑时，双击这个桌面图标只会打不开。
 
-- 桌面 / 开始菜单出现独立图标，双击即开
-- 独立窗口运行，没有浏览器地址栏
-- 右键任务栏图标有「我的错题集」快捷入口
+先按 **A** 或 **C** 把服务跑起来并保持不关，然后：
+
+1. 用 Chrome / Edge 打开 <http://127.0.0.1:5178>
+2. 地址栏右侧会出现**安装图标**（或点页面右上角自动出现的「安装到桌面」按钮）
+3. 装完之后：
+   - 桌面 / 开始菜单出现独立图标，双击即开（前提：后台服务仍在运行）
+   - 独立窗口运行，没有浏览器地址栏
+   - 右键任务栏图标有「我的错题集」快捷入口
+
+> 想要真正「双击即开、不用手动起服务」，请直接用 **A. 免安装 exe**。
 
 > **不配 API Key 也能用**：页面会自动切到**手动模式**——把生成的请求复制给任意大模型（包括对话式 AI），再把返回的 JSON 粘回来，同样能渲染并保存。
 
@@ -204,6 +211,7 @@ https://xxxx-你的公网IP.free.pinggy.net/?code=123456
 ├── db.js                  数据层：错题集持久化、科目汇总、去重、统计、导出
 ├── qr.js                  自研二维码生成器（零依赖，用于手机扫码访问）
 ├── paths.js               应用根目录解析（兼容源码形态与 exe 形态）
+├── sample-mistakes.js     内置的 6 道示例错题（数学3/物理2/英语1，首次启动植入）
 ├── build-exe.js           打包成免安装 exe（SEA + postject + resedit 写图标和版本信息）
 ├── make-icons.js          生成应用图标（封面图 + 标语，PNG + ICO，需 @napi-rs/canvas）
 ├── share.js               一键分享：建公网隧道 + 访问口令 + 二维码（cloudflared 或 SSH）
@@ -224,6 +232,7 @@ https://xxxx-你的公网IP.free.pinggy.net/?code=123456
 │   ├── db.json            你的错题集（运行时生成，含 server_only）
 │   └── backups/           每日自动备份
 ├── build/                 打包中间产物（bundle.js / sea-prep.blob / postject）
+├── test-runner.js         测试运行器：起「隔离数据目录」实例 → 依次跑各测试 → 清理（npm test 用它）
 ├── test-api.js            接口契约测试（24 项）
 ├── test-e2e.js            端到端测试（23 项）
 ├── test-persistence.js    错题集持久化测试（48 项）
@@ -271,7 +280,7 @@ node build-exe.js         # 重新打包时自动把 app.ico 写入 PE
 | 智谱 AI | `https://open.bigmodel.cn/api/paas/v4` | `glm-4v-plus` | ✅ |
 | 月之暗面 | `https://api.moonshot.cn/v1` | `moonshot-v1-8k-vision-preview` | ✅ |
 | 硅基流动 | `https://api.siliconflow.cn/v1` | `Qwen/Qwen2.5-VL-72B-Instruct` | ✅ |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | ❌ 仅文字 |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-flash`（V4.1-Flash） | ✅ |
 | Ollama（本地） | `http://127.0.0.1:11434/v1` | `qwen2.5vl:7b` | ✅ |
 
 **要用图片识别必须选支持视觉的模型**；纯文字模型请用「粘贴题目文字」入口。
@@ -343,7 +352,7 @@ node build-exe.js         # 重新打包时自动把 app.ico 写入 PE
 
 ## 七、测试
 
-先启动服务（`node server.js`），再另开一个终端：
+直接跑 `npm test` —— 它会自动起一个「隔离数据目录」的实例，不需要你先启动服务：
 
 ```bash
 node test-api.js           # 24 项：Schema 校验 / 隔离存储 / 越权 / 泄漏检测 / 手动模式
@@ -355,8 +364,12 @@ node test-share.js         # 27 项：访问口令 + 公网地址（自带隔离
 node test-exe.js           # 15 项：打包版 exe 能否独立运行（不需要先启动服务）
 ```
 
-合计 178 项，全部通过。
+`npm test` 会依次跑前 6 个（合计 163 项）；`test-exe.js` 需要先打包出 exe，单独运行（15 项）。**全部 178 项通过。**
 
+- 测试**不会污染你真实的 `data/`**：`npm test` 由 `test-runner.js` 起一个隔离实例（数据写到临时 `CUOTIJI_DATA` 目录），跑完自动清理；它还会自动挑一个空闲端口，不打扰你正在运行的实例。
+- 想单独跑某个文件（对着自己起的实例）：`node test-api.js`（默认连 `127.0.0.1:5178`，可用 `CTJ_TEST_BASE` 指定其它地址）。
+- 服务的访问口令（`access_code`）不影响测试：脚本会读 `config.json` 并自动带上口令，等价于本机浏览器自用。
+- 测试脚本统一以 `process.exitCode` 收尾（不再用 `process.exit`），避免 Windows 上 libuv 句柄竞态导致进程异常中止、连累后续用例不执行。
 - 所有断言都基于实际数据计算，可以随时重复运行，不会因为错题集里已有内容而误报。
 - `test-e2e.js` 和 `test-persistence.js` 会临时把 `config.json` 指向本地假模型端点，跑完自动还原。
 - `test-api.js` 在检测到已配置真实模型时会**跳过**最后一项，避免消耗你的 API 额度。

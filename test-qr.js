@@ -76,4 +76,4 @@ console.log('\n【4】SVG 输出');
 
 console.log('\n────────────────────────────');
 console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-process.exit(fail ? 1 : 0);
+process.exitCode = fail ? 1 : 0;

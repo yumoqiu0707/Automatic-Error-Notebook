@@ -13,7 +13,12 @@ const path = require('path');
 const crypto = require('crypto');
 const { APP_ROOT } = require('./paths');
 
-const DATA_DIR = path.join(APP_ROOT, 'data');
+/* 首次启动时植入的示例错题数据；模块缺失时降级为空数组、不影响启动 */
+let SAMPLE_MISTAKES = [];
+try { SAMPLE_MISTAKES = require('./sample-mistakes'); } catch (e) { SAMPLE_MISTAKES = []; }
+
+/* 数据目录：默认在应用根目录下的 data/；可用环境变量 CUOTIJI_DATA 指到别处（测试隔离用） */
+const DATA_DIR = process.env.CUOTIJI_DATA ? path.resolve(process.env.CUOTIJI_DATA) : path.join(APP_ROOT, 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
 const LEGACY_RECORDS = path.join(DATA_DIR, 'records.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
@@ -68,6 +73,42 @@ function emptyDb() {
   return { version: 1, created_at: nowISO(), updated_at: nowISO(), records: {}, mistakes: {} };
 }
 
+/**
+ * 首次运行（data/db.json 尚不存在）时植入示例错题，让用户一打开就能看到错题集的样子。
+ * 只在首次启动调用；用户删除后不会再自动补回。
+ */
+function seedExamples() {
+  if (!Array.isArray(SAMPLE_MISTAKES) || !SAMPLE_MISTAKES.length) return;
+  const at = nowISO();
+  let n = 0;
+  SAMPLE_MISTAKES.forEach(mk => {
+    if (!mk || !mk.question || !mk.question.stem) return;
+    const id = stemKey(mk.question.stem);
+    if (db.mistakes[id]) return;
+    const fields = pickMistakeFields(mk);
+    db.mistakes[id] = Object.assign({
+      id: id,
+      created_at: at,
+      updated_at: at,
+      record_id: null,
+      source: 'sample',
+      img_hash: null,
+      wrong_count: 1,
+      occurrences: [],
+      mastery: '待批改',
+      review_count: 0,
+      last_review_at: null,
+      starred: false,
+      tags: ['示例'],
+      note: '',
+      similar_attempts: {},
+      grading_history: []
+    }, fields);
+    n++;
+  });
+  if (n) console.log('[db] 已植入 ' + n + ' 道示例错题（可在「我的错题集」里删除）');
+}
+
 function load() {
   if (db) return db;
   try {
@@ -93,6 +134,9 @@ function load() {
         saveNow();
       }
     } catch (e2) { /* 没有旧数据，忽略 */ }
+    /* 首次启动（data/db.json 不存在）：植入示例错题并落盘 */
+    seedExamples();
+    saveNow();
   }
   return db;
 }

@@ -11,7 +11,8 @@
     "icons": "node make-icons.js",
     "build:exe": "node build-exe.js",
     "build:deploy": "node build-deploy.js",
-    "test": "node test-api.js && node test-e2e.js && node test-persistence.js && node test-render.js && node test-qr.js && node test-share.js"
+    "test": "node test-runner.js",
+    "test:exe": "node test-exe.js"
   },
   "keywords": ["错题集", "学习", "AI", "PWA", "两阶段提示词"],
   "license": "MIT",

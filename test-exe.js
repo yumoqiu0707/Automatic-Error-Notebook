@@ -108,6 +108,6 @@ setTimeout(async () => {
   setTimeout(() => {
     console.log('\n────────────────────────────');
     console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-    process.exit(fail ? 1 : 0);
+    process.exitCode = fail ? 1 : 0;
   }, 600);
 }, 4000);

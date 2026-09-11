@@ -1,5 +1,22 @@
 /* 后端接口联调测试：Schema 校验 / 隔离存储 / 越权校验 / 泄漏检测 */
-const BASE = 'http://127.0.0.1:5178';
+const BASE = process.env.CTJ_TEST_BASE || 'http://127.0.0.1:5178';
+
+/* 本机服务若开启了访问口令（config.json 里的 access_code），测试请求自动带上 ?code=，
+   等价于本机浏览器自用（启动时打开的链接本就会自动带口令）。 */
+(function installAccessCodeShim() {
+  let code = '';
+  try {
+    code = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'config.json'), 'utf8')).access_code || '';
+  } catch (e) { /* 无 config.json 或未开口令 */ }
+  if (!code) return;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = function (url, opts) {
+    if (typeof url === 'string' && url.indexOf('127.0.0.1') > -1 && url.indexOf('code=') === -1) {
+      url += (url.indexOf('?') > -1 ? '&' : '?') + 'code=' + encodeURIComponent(code);
+    }
+    return origFetch.call(this, url, opts);
+  };
+})();
 
 async function post(p, body) {
   const r = await fetch(BASE + p, {
@@ -158,5 +175,5 @@ function validInitial(leak) {
 
   console.log('\n────────────────────────────');
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 })();

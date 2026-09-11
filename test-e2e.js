@@ -6,7 +6,21 @@ const path = require('path');
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, 'config.json');
 const MOCK_PORT = 5199;
-const APP = 'http://127.0.0.1:5178';
+const APP = process.env.CTJ_TEST_BASE || 'http://127.0.0.1:5178';
+
+/* 本机服务若开启了访问口令（config.json 里的 access_code），测试请求自动带上 ?code=。 */
+(function installAccessCodeShim() {
+  let code = '';
+  try { code = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')).access_code || ''; } catch (e) {}
+  if (!code) return;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = function (url, opts) {
+    if (typeof url === 'string' && url.indexOf('127.0.0.1') > -1 && url.indexOf('code=') === -1) {
+      url += (url.indexOf('?') > -1 ? '&' : '?') + 'code=' + encodeURIComponent(code);
+    }
+    return origFetch.call(this, url, opts);
+  };
+})();
 
 let callCount = 0;
 const seen = [];
@@ -216,5 +230,5 @@ async function post(p, body) {
 
   console.log('\n────────────────────────────');
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 })();

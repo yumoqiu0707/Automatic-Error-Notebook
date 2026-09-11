@@ -5,9 +5,25 @@ const path = require('path');
 
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, 'config.json');
-const DB_PATH = path.join(ROOT, 'data', 'db.json');
+/* 数据目录跟随 CUOTIJI_DATA（测试运行器用它隔离数据），默认仍为项目下的 data/ */
+const DATA_DIR = process.env.CUOTIJI_DATA ? path.resolve(process.env.CUOTIJI_DATA) : path.join(ROOT, 'data');
+const DB_PATH = path.join(DATA_DIR, 'db.json');
 const MOCK_PORT = 5198;
-const APP = 'http://127.0.0.1:5178';
+const APP = process.env.CTJ_TEST_BASE || 'http://127.0.0.1:5178';
+
+/* 本机服务若开启了访问口令（config.json 里的 access_code），测试请求自动带上 ?code=。 */
+(function installAccessCodeShim() {
+  let code = '';
+  try { code = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')).access_code || ''; } catch (e) {}
+  if (!code) return;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = function (url, opts) {
+    if (typeof url === 'string' && url.indexOf('127.0.0.1') > -1 && url.indexOf('code=') === -1) {
+      url += (url.indexOf('?') > -1 ? '&' : '?') + 'code=' + encodeURIComponent(code);
+    }
+    return origFetch.call(this, url, opts);
+  };
+})();
 
 const INITIAL = {
   status: 'ok', stage: 'INITIAL', message: '',
@@ -213,7 +229,7 @@ async function waitForDb(cond) {
       check('db.json 里存有记录与锁定答案',
         Boolean(raw && raw.records[recId] && raw.records[recId].server_only.locked_solutions.length === 2));
       check('db.json 里保存了笔记与标签', raw && raw.mistakes[mkId].note === '下次先看二次项系数');
-      const bdir = path.join(ROOT, 'data', 'backups');
+      const bdir = path.join(DATA_DIR, 'backups');
       check('已生成当日备份', fs.existsSync(bdir) && fs.readdirSync(bdir).length > 0,
         fs.existsSync(bdir) ? fs.readdirSync(bdir).join(',') : '无');
       check('无残留 .tmp 文件', !fs.existsSync(DB_PATH + '.tmp'));
@@ -261,5 +277,5 @@ async function waitForDb(cond) {
 
   console.log('\n────────────────────────────');
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 })();

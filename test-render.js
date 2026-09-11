@@ -3,6 +3,21 @@
 const fs = require('fs');
 const vm = require('vm');
 
+/* 本机服务若开启了访问口令（config.json 里的 access_code），测试请求自动带上 ?code=，
+   等价于本机浏览器自用（启动时打开的链接本就会自动带口令）。 */
+(function installAccessCodeShim() {
+  let code = '';
+  try { code = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf8')).access_code || ''; } catch (e) {}
+  if (!code) return;
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = function (url, opts) {
+    if (typeof url === 'string' && url.indexOf('127.0.0.1') > -1 && url.indexOf('code=') === -1) {
+      url += (url.indexOf('?') > -1 ? '&' : '?') + 'code=' + encodeURIComponent(code);
+    }
+    return origFetch.call(this, url, opts);
+  };
+})();
+
 const html = fs.readFileSync('public/index.html', 'utf8');
 const code = html.match(/<script>([\s\S]*)<\/script>/)[1];
 
@@ -42,7 +57,7 @@ const strip = h => h.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '\u
   .split('\u0001').map(t => t.trim()).filter(Boolean);
 
 (async () => {
-  const B = 'http://127.0.0.1:5178';
+  const B = process.env.CTJ_TEST_BASE || 'http://127.0.0.1:5178';
   for (let i = 0; i < 30; i++) {
     try { const r = await fetch(B + '/api/status'); if (r.ok) break; } catch (e) {}
     await new Promise(r => setTimeout(r, 400));
@@ -149,5 +164,5 @@ const strip = h => h.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '\u
 
   console.log('\n────────────────────────────');
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
-  process.exit(fail ? 1 : 0);
+  process.exitCode = fail ? 1 : 0;
 })();
