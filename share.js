@@ -6,8 +6,8 @@
  *   node share.js --port 5190         指定本机服务端口
  *
  * 自动选通道（优先前者）：
- *   1. cloudflared  —— 需要 tools/cloudflared.exe，无时长限制，网址不暴露 IP
- *   2. pinggy（SSH）—— Windows 自带 ssh.exe，零下载，但免费版 60 分钟失效
+ *   1. cloudflared  —— 需要 tools/cloudflared（Windows 上是 cloudflared.exe），无时长限制，网址不暴露 IP
+ *   2. pinggy（SSH）—— 系统自带 ssh，零下载，但免费版 60 分钟失效
  *                      且网址里会带你的公网 IP（在意隐私就用 cloudflared）
  *
  * 做了三件事：
@@ -25,7 +25,8 @@ const { spawn, exec } = require('child_process');
 const QR = require('./qr');
 
 const ROOT = __dirname;
-const CF = path.join(ROOT, 'tools', 'cloudflared.exe');
+const CF_NAME = process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
+const CF = path.join(ROOT, 'tools', CF_NAME);
 const CONFIG_PATH = path.join(ROOT, 'config.json');
 
 /* ---------- 参数 ---------- */
@@ -134,15 +135,15 @@ function qrHtml(url, backend) {
      所以必须真的执行 --version 验一次。 */
   const backend = cfUsable() ? 'cloudflared' : 'pinggy';
   if (backend === 'pinggy') {
-    console.log(C.y + '  未找到 tools\\cloudflared.exe，改用系统自带 SSH 通道（免费版 60 分钟后失效）。' + C.x);
-    console.log(C.d + '  想要不限时且不暴露 IP：把 cloudflared.exe 放到 tools\\ 目录再运行本脚本。' + C.x + '\n');
+    console.log(C.y + '  未找到 tools/' + CF_NAME + '，改用系统自带 SSH 通道（免费版 60 分钟后失效）。' + C.x);
+    console.log(C.d + '  想要不限时且不暴露 IP：把 ' + CF_NAME + ' 放到 tools/ 目录再运行本脚本。' + C.x + '\n');
   }
 
   /* 2. 本机服务在跑吗 */
   const p = await probe();
   if (!p.up) {
     console.log(C.r + '  本机服务没在运行（端口 ' + PORT + ' 没响应）' + C.x);
-    console.log('  请先双击「启动错题集助手.bat」，或手动运行 node server.js，再回来执行分享。\n');
+    console.log('  请先启动「错题集助手」——Windows 双击 启动错题集助手.bat；macOS/Linux 在终端里 bash start.sh，再回来执行分享。\n');
     process.exit(1);
   }
 

@@ -5,6 +5,11 @@
 *.vbs text eol=crlf
 *.cmd text eol=crlf
 
+# shell 脚本反过来：必须是 LF。CRLF 会让 macOS / Linux 上的 bash 报
+# 「bad interpreter: /bin/bash^M」之类的错，脚本根本跑不起来。
+*.sh text eol=lf
+*.command text eol=lf
+
 # 其余文本文件按仓库标准 LF 存，签出时按系统转换
 * text=auto
 
