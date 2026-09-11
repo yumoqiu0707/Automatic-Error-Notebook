@@ -1592,6 +1592,13 @@ function openPhoneModal() {
         h += '<div class="hint" style="margin-top:8px;">其他可用地址：' +
              d.urls.slice(1).map(esc).join('　') + '</div>';
       }
+      if (d.access_code_on && d.access_code) {
+        h += '<div class="callout warn" style="margin-top:12px;"><span class="ic">!</span><div>' +
+             '这台电脑开了<b>访问口令</b>。手机扫码打开后若要求输入口令，就填：' +
+             '<b style="font-size:17px;letter-spacing:2px;user-select:all;">' + esc(d.access_code) + '</b>' +
+             '<div style="margin-top:4px;color:var(--tx-2);">只需输一次，手机会记住（180 天）。不想每次都要口令，可在电脑上运行 <code>node share.js --off</code> 关掉。</div>' +
+             '</div></div>';
+      }
       h += '<div class="hint" style="margin-top:10px;">' +
            '<b>注意</b>：手机能访问的前提是电脑上这个程序正在运行，且两者在同一个 Wi-Fi 下。' +
            '错题数据保存在电脑上，手机和电脑看到的是同一份。</div>';

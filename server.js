@@ -153,7 +153,9 @@ const GATE_PAGE = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"
   '<h1>错题集助手</h1><p>请输入访问口令</p>' +
   '<form method="get"><input name="code" type="password" placeholder="访问口令" autofocus>' +
   '<button type="submit">进入</button></form>' +
-  '<div class="err" id="e"></div></div>' +
+  '<div class="err" id="e"></div>' +
+  '<p style="margin-top:18px;font-size:12px;color:#98a2b3;line-height:1.7;">' +
+  '口令在你<b>电脑</b>上：打开错题集页面 → 点右上角「手机访问」→ 窗口里会显示口令。</p></div>' +
   '<script>if(location.search.indexOf("code=")>-1){document.getElementById("e").textContent="口令不对，再试一次";}</script>' +
   '</body></html>';
 
@@ -761,7 +763,10 @@ const server = http.createServer(async (req, res) => {
         qr_svg: qr,
         public_url: PUBLIC_URL || null,
         share_url: shareUrl || null,
-        access_code_on: Boolean(ACCESS_CODE)
+        access_code_on: Boolean(ACCESS_CODE),
+        /* 回显口令，方便电脑端把它抄给手机 —— 本机页面本身也要口令才能打开，不构成额外泄露；
+           否则用户自己忘了口令，手机就永远进不来。 */
+        access_code: ACCESS_CODE || null
       });
     }
 
