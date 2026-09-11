@@ -1,0 +1,46 @@
+# ============================================================
+#  绝不上传：密钥 / 个人隐私数据 / 大二进制
+# ============================================================
+
+# API Key 在这里 —— 泄露后别人能直接刷你的额度
+config.json
+deploy/config.json
+*.env
+.env*
+
+# 你的真实错题（db.json 里含 server_only 锁定答案）与每日备份
+data/
+deploy/data/
+backups/
+*.db.json
+
+# 打包产物：87MB 的 exe + 分发 zip + 中间文件
+dist/
+build/
+release/
+*.exe
+*.zip
+
+# 部署目录是 build-deploy.js 生成的（里面还含带密钥的 config.json）
+deploy/
+
+# node_modules（本项目运行时零依赖，只有打包工具链会用到）
+node_modules/
+
+# ============================================================
+#  临时 / 本地生成
+# ============================================================
+
+# 分享时生成的二维码页面（里面带你的公网 IP）
+_share-link.html
+_share.html
+_phone.html
+_*.html
+
+# 编辑器与系统
+.DS_Store
+Thumbs.db
+*.log
+.workbuddy-ai/
+.idea/
+.vscode/

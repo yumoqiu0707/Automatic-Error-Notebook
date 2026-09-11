@@ -1,0 +1,17 @@
+# Windows 脚本必须保持 CRLF —— cmd.exe 按系统代码页读批处理，
+# 行尾一旦变成裸 LF（或混入 UTF-8 中文）就会语句错乱、中文乱码。
+# 不加这几行，git 默认会把 CRLF 归一成 LF，别人 clone 下来脚本就是坏的。
+*.bat text eol=crlf
+*.vbs text eol=crlf
+*.cmd text eol=crlf
+
+# 其余文本文件按仓库标准 LF 存，签出时按系统转换
+* text=auto
+
+# 二进制，千万别做换行转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.exe binary
+*.zip binary

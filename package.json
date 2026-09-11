@@ -1,0 +1,21 @@
+{
+  "name": "cuotiji-assistant",
+  "version": "1.1.0",
+  "private": true,
+  "description": "错题集生成与知识点拓展助手 —— 两阶段错题处理（识别解答 + 变式题批改），带按科目归类的自动保存错题集",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js --no-open",
+    "share": "node share.js",
+    "shared": "node start-shared.js",
+    "icons": "node make-icons.js",
+    "build:exe": "node build-exe.js",
+    "build:deploy": "node build-deploy.js",
+    "test": "node test-api.js && node test-e2e.js && node test-persistence.js && node test-render.js && node test-qr.js && node test-share.js"
+  },
+  "keywords": ["错题集", "学习", "AI", "PWA", "两阶段提示词"],
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "dependencies": {},
+  "devDependencies": {}
+}
