@@ -155,8 +155,10 @@ function validInitial(leak) {
     const sys = r.body.messages[0].content;
     const usr = r.body.messages[1].content;
     check('system 含防注入规则', /防提示注入/.test(sys));
-    check('system 含首轮输出结构', /首轮输出结构/.test(sys));
-    check('user 含 locked_solutions', /locked_solutions/.test(usr));
+    check('system 是批改专用精简版（含批改输出结构）', /批改输出结构/.test(sys));
+    check('system 不含阶段一内容（精简省 token）', /首轮输出结构/.test(sys) === false);
+    check('user 只含被提交题目的锁定答案', /m1_q1/.test(usr) && usr.indexOf('m1_q2') === -1,
+      '提交 m1_q1 时不应携带 m1_q2 的答案');
     check('user 含 submitted_answers', /submitted_answers/.test(usr));
     check('user 含正确答案 A', /"correct_answer":"A"/.test(usr.replace(/\s/g, '')));
   }
@@ -184,6 +186,20 @@ function validInitial(leak) {
       r.body.userVisible && r.body.userVisible.mistakes[0].error_analysis.error_type);
     check('返回降级警告供前端提示', Array.isArray(r.body.coercions) && r.body.coercions.length > 0,
       JSON.stringify(r.body.coercions));
+  }
+
+  console.log('\n【12】简洁模式开关应影响提示词并可恢复');
+  {
+    await post('/api/config', { concise_mode: true });
+    const r1 = await post('/api/manual-prompt', { kind: 'initial', text: '1+1=?' });
+    check('开启后系统提示词带简洁模式指令',
+      r1.status === 200 && /简洁模式/.test(r1.body.messages[0].content));
+    check('指令在提示词末尾（不破坏前缀缓存）',
+      /简洁模式[\s\S]*$/.test(r1.body.messages[0].content) &&
+      r1.body.messages[0].content.indexOf('简洁模式') > r1.body.messages[0].content.indexOf('# 版本'));
+    await post('/api/config', { concise_mode: false });
+    const r2 = await post('/api/manual-prompt', { kind: 'initial', text: '1+1=?' });
+    check('关闭后恢复完整版提示词', r2.status === 200 && !/本轮附加要求/.test(r2.body.messages[0].content));
   }
 
   console.log('\n────────────────────────────');

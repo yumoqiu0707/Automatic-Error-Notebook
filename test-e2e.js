@@ -89,7 +89,7 @@ const mock = http.createServer((req, res) => {
       .join('\n');
     const isGrade = /stage:\s*GRADE_SIMILAR/.test(allUser);
     const isRetry = /未通过校验/.test(allUser);
-    seen.push({ call: callCount, isGrade, retry: isRetry });
+    seen.push({ call: callCount, isGrade, retry: isRetry, user: allUser });
 
     let content;
     if (isGrade) {
@@ -204,6 +204,9 @@ async function post(p, body) {
       });
       check('返回 200', r.status === 200);
       check('只回 1 条结果', r.body.userVisible.grading_results.length === 1);
+      check('未提交题目的锁定答案没有发给模型',
+        seen[seen.length - 1].user.indexOf('$17$') === -1,
+        '只提交 m1_q1 时不应携带 m1_q2 的答案');
     }
 
     console.log('\n【6】图片缓存（img_hash）不重复消耗 token');

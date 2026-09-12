@@ -51,6 +51,11 @@ const DEFAULT_CONFIG = {
   temperature: 0.2,
   top_p: 0.8,
   use_json_mode: true,
+  /* 单次回复的输出 token 上限：防止模型跑偏时的天价长输出，正常作业远用不满 */
+  max_tokens: 8000,
+  /* 简洁模式：复习模块减为三件套、解析压短、变式题固定 2 道。
+     第一步（识别+出题）提速约三到四成，token 同步再省一截；复习内容会薄一些 */
+  concise_mode: false,
   /* 监听地址：0.0.0.0 允许同一 Wi-Fi 下的手机访问；改成 127.0.0.1 则只允许本机 */
   host: '0.0.0.0'
 };
@@ -221,6 +226,7 @@ async function callModel(messages, cfg, { jsonMode = true } = {}) {
     top_p: cfg.top_p != null ? cfg.top_p : 0.8
   };
   if (jsonMode && cfg.use_json_mode !== false) body.response_format = { type: 'json_object' };
+  if (cfg.max_tokens) body.max_tokens = Number(cfg.max_tokens);
 
   const res = await fetch(url, {
     method: 'POST',
@@ -245,6 +251,10 @@ async function callModel(messages, cfg, { jsonMode = true } = {}) {
     ? data.choices[0].message.content
     : '';
   if (!content) throw new Error('模型返回内容为空');
+  const u = data.usage || {};
+  console.log('[token] 输入 ' + (u.prompt_tokens || '?') +
+    (u.prompt_cache_hit_tokens ? '（缓存命中 ' + u.prompt_cache_hit_tokens + '）' : '') +
+    ' / 输出 ' + (u.completion_tokens || '?'));
   return { content, usage: data.usage || null };
 }
 
@@ -414,7 +424,8 @@ async function runInitial({ text, imageDataUrl, subjectHint, gradeLevel, ocrText
 
   const mergedOcr = [text, ocrText].filter(Boolean).join('\n\n');
   const messages = buildInitialMessages({
-    subjectHint, gradeLevel, ocrText: mergedOcr, imageDataUrl
+    subjectHint, gradeLevel, ocrText: mergedOcr, imageDataUrl,
+    concise: cfg.concise_mode === true
   });
 
   let parsed = null, usage = null, attempts = 0, errs = [];
@@ -504,9 +515,12 @@ async function runGrade({ recordId, submittedAnswers }) {
     throw err;
   }
 
-  /* 硬规则 7：只把服务端存储的 locked_solutions 传下去，模型不得重算 */
+  /* 硬规则 7：只把服务端存储的 locked_solutions 传下去，模型不得重算。
+     只带被提交题目的锁定答案：省输入 token，也让未提交答案更少离开服务端 */
+  const subKeys = submittedAnswers.map(s => s.mistake_id + '/' + s.question_id);
+  const lockedForGrade = locked.filter(l => subKeys.indexOf(l.mistake_id + '/' + l.question_id) > -1);
   const messages = buildGradeMessages({
-    serverOnlyData: { locked_solutions: locked },
+    serverOnlyData: { locked_solutions: lockedForGrade },
     submittedAnswers
   });
 
@@ -559,14 +573,17 @@ function buildManualPrompt(kind, payload) {
       throw Object.assign(new Error('提交的题目 ID 非法或对应记录不存在：' +
         illegal.map(x => x.question_id).join('、')), { code: 'ILLEGAL_ID' });
     }
-    return buildGradeMessages({ serverOnlyData: { locked_solutions: locked }, submittedAnswers: subs });
+    const subKeys = subs.map(s => s.mistake_id + '/' + s.question_id);
+    const lockedForGrade = locked.filter(l => subKeys.indexOf(l.mistake_id + '/' + l.question_id) > -1);
+    return buildGradeMessages({ serverOnlyData: { locked_solutions: lockedForGrade }, submittedAnswers: subs });
   }
   const mergedOcr = [payload.text, payload.ocrText].filter(Boolean).join('\n\n');
   return buildInitialMessages({
     subjectHint: payload.subjectHint,
     gradeLevel: payload.gradeLevel,
     ocrText: mergedOcr,
-    imageDataUrl: null
+    imageDataUrl: null,
+    concise: readConfig().concise_mode === true
   });
 }
 
@@ -702,6 +719,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, {
         base_url: cfg.base_url, model: cfg.model, vision: cfg.vision !== false,
         temperature: cfg.temperature, top_p: cfg.top_p, use_json_mode: cfg.use_json_mode !== false,
+        max_tokens: cfg.max_tokens || 8000, concise_mode: cfg.concise_mode === true,
         api_key_set: Boolean(cfg.api_key)
       });
     }
@@ -710,6 +728,8 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const patch = {};
       ['base_url', 'model', 'temperature', 'top_p'].forEach(k => { if (body[k] !== undefined) patch[k] = body[k]; });
+      if (body.max_tokens !== undefined) patch.max_tokens = Math.max(256, Number(body.max_tokens) || 8000);
+      if (body.concise_mode !== undefined) patch.concise_mode = Boolean(body.concise_mode);
       ['vision', 'use_json_mode'].forEach(k => { if (body[k] !== undefined) patch[k] = Boolean(body[k]); });
       if (body.api_key) patch.api_key = String(body.api_key).trim();
       if (body.clear_key) patch.api_key = '';
