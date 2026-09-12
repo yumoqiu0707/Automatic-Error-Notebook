@@ -41,7 +41,17 @@
    macOS 也可以**直接双击 `启动错题集助手.command`**（和上面等价）
 3. 浏览器自动打开 → 开始用。**关掉终端窗口 / 按 Ctrl+C = 停止**
 
-> **记不住该点哪个？** 按平台认：Windows 打包版是 `错题集助手.exe`，Windows 源码版是 `启动错题集助手.bat`，macOS / Linux 是 `bash start.sh`（macOS 也可双击 `启动错题集助手.command`）。其它文件都不用管。
+### ④ 安卓手机独立运行（不需要电脑）
+
+程序可以直接跑在手机上：装一个 Termux（**必须从 [F-Droid](https://f-droid.org/packages/com.termux/) 或 GitHub Releases 装**，应用商店里的是废弃版），把项目传到手机后一条命令启动：
+
+```bash
+bash start-termux.sh
+```
+
+首次运行自动装 Node.js，启动后浏览器自动打开页面，再「添加到主屏幕」就能当 App 用——电脑关机也不影响。数据存在手机里，`bash start-termux.sh backup` 可一键备份到「下载」文件夹。详细步骤见 **[安卓手机独立使用指南](安卓手机独立使用指南.md)**。
+
+> **记不住该点哪个？** 按平台认：Windows 打包版是 `错题集助手.exe`，Windows 源码版是 `启动错题集助手.bat`，macOS / Linux 是 `bash start.sh`（macOS 也可双击 `启动错题集助手.command`），安卓手机是 Termux 里 `bash start-termux.sh`。其它文件都不用管。
 
 打开后第一次用，建议点右上角**「模型设置」**填上你的 Base URL / API Key / 模型名再保存（不填也能用「手动模式」，见下文 A）。
 
