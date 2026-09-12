@@ -290,7 +290,11 @@ function validateInitial(obj) {
     else {
       if (!Array.isArray(m.error_analysis.knowledge_gap)) errs.push(`${at}.error_analysis.knowledge_gap 必须是数组`);
       if (m.error_analysis.error_type && ERR_TYPES.indexOf(m.error_analysis.error_type) === -1) {
-        errs.push(`${at}.error_analysis.error_type 取值非法：${m.error_analysis.error_type}`);
+        /* 非关键字段宽容处理：模型偶尔会把"未识别作答"之类的说明性文字写进错因枚举，
+           为此作废整次识别太亏 —— 降级为「其他」，警告带回前端供用户知晓 */
+        const bad = m.error_analysis.error_type;
+        m.error_analysis.error_type = '其他';
+        (obj._coerced = obj._coerced || []).push(`${at}.error_type「${bad}」不是合法枚举，已降级为「其他」`);
       }
     }
     const kr = m.knowledge_review;
@@ -372,6 +376,13 @@ function detectLeak(initial) {
   return hits;
 }
 
+/** 取出 validateInitial 降级记录（挂在返回对象上的临时字段） */
+function takeCoercions(parsed) {
+  const list = parsed && parsed._coerced ? parsed._coerced.slice() : [];
+  if (parsed) delete parsed._coerced;
+  return list;
+}
+
 /* ================================================================== */
 /* 业务：阶段一 / 阶段二                                                */
 /* ================================================================== */
@@ -430,6 +441,8 @@ async function runInitial({ text, imageDataUrl, subjectHint, gradeLevel, ocrText
   }
 
   const leaks = parsed.status === 'ok' ? detectLeak(parsed) : [];
+  const coercions = takeCoercions(parsed);
+  if (coercions.length) console.log('[initial] 错因类型降级：' + coercions.join('；'));
 
   const id = newRecordId();
   records[id] = {
@@ -443,6 +456,7 @@ async function runInitial({ text, imageDataUrl, subjectHint, gradeLevel, ocrText
     user_visible: parsed.user_visible,
     server_only: parsed.server_only,
     leak_warnings: leaks,
+    coercions,
     grading: null
   };
   persist();
@@ -454,7 +468,7 @@ async function runInitial({ text, imageDataUrl, subjectHint, gradeLevel, ocrText
     : [];
 
   return {
-    recordId: id, userVisible: parsed.user_visible, leakWarnings: leaks,
+    recordId: id, userVisible: parsed.user_visible, leakWarnings: leaks, coercions,
     cached: false, usage, savedMistakes: saved
   };
 }
@@ -566,6 +580,8 @@ function ingestInitial(rawJson) {
     throw Object.assign(new Error('未通过 Schema 校验：' + errs.slice(0, 6).join('；')), { code: 'SCHEMA_FAIL', detail: errs });
   }
   const leaks = parsed.status === 'ok' ? detectLeak(parsed) : [];
+  const coercions = takeCoercions(parsed);
+  if (coercions.length) console.log('[ingest] 错因类型降级：' + coercions.join('；'));
   const id = newRecordId();
   records[id] = {
     id,
@@ -575,13 +591,14 @@ function ingestInitial(rawJson) {
     user_visible: parsed.user_visible,
     server_only: parsed.server_only,
     leak_warnings: leaks,
+    coercions,
     grading: null
   };
   persist();
   const saved = parsed.status === 'ok'
     ? DB.addMistakesFromRecord(records[id], parsed.user_visible.mistakes)
     : [];
-  return { recordId: id, userVisible: parsed.user_visible, leakWarnings: leaks, savedMistakes: saved };
+  return { recordId: id, userVisible: parsed.user_visible, leakWarnings: leaks, coercions, savedMistakes: saved };
 }
 
 function ingestGrade(recordId, rawJson) {

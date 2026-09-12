@@ -173,6 +173,19 @@ function validInitial(leak) {
     }
   }
 
+  console.log('\n【11】错因枚举非法值应降级为「其他」而非拒绝（宽容非关键字段）');
+  {
+    const bad = validInitial();
+    bad.user_visible.mistakes[0].error_analysis.error_type = '未识别作答';
+    const r = await post('/api/ingest', { kind: 'initial', raw: JSON.stringify(bad) });
+    check('返回 200（不再因非关键字段作废整次识别）', r.status === 200, 'HTTP ' + r.status);
+    check('error_type 已降级为「其他」',
+      r.body.userVisible && r.body.userVisible.mistakes[0].error_analysis.error_type === '其他',
+      r.body.userVisible && r.body.userVisible.mistakes[0].error_analysis.error_type);
+    check('返回降级警告供前端提示', Array.isArray(r.body.coercions) && r.body.coercions.length > 0,
+      JSON.stringify(r.body.coercions));
+  }
+
   console.log('\n────────────────────────────');
   console.log('  通过 ' + pass + ' 项，失败 ' + fail + ' 项');
   process.exitCode = fail ? 1 : 0;
